@@ -8,8 +8,8 @@ const start = async () => {
   await connectDb();
   const server = http.createServer(app);
   initSocket(server);
-  server.listen(env.port, () => {
-    console.log(`API running on http://localhost:${env.port}`);
+  server.listen(env.port, '0.0.0.0', () => {
+    console.log(`API running on port ${env.port}`);
   });
 };
 
