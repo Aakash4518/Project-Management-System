@@ -10,5 +10,13 @@ export const projectValidator = [
     .optional()
     .isIn(["low", "medium", "high", "critical"])
     .withMessage("Invalid project priority"),
-  body("members").optional().isArray().withMessage("Members must be an array"),
+  body("members")
+    .optional()
+    .customSanitizer((value) => (typeof value === "string" ? [value] : value))
+    .isArray()
+    .withMessage("Members must be an array"),
+  body("members.*")
+    .optional()
+    .isMongoId()
+    .withMessage("Each member id must be a valid user id"),
 ];

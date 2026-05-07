@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { Link } from "react-router-dom";
 import api from "../../api/client";
@@ -31,6 +31,11 @@ export default function TasksPage() {
   const [submitting, setSubmitting] = useState(false);
   const [commentDrafts, setCommentDrafts] = useState({});
   const canManage = ["admin", "manager"].includes(user?.role);
+
+  const projectMembers = useMemo(() => {
+    const project = (projectsQuery.data?.items || []).find((item) => item._id === form.project);
+    return project?.members || [];
+  }, [projectsQuery.data?.items, form.project]);
 
   useEffect(() => {
     if (!user) return;
@@ -131,16 +136,45 @@ export default function TasksPage() {
               <input className="input" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </FormField>
             <FormField label="Project">
-              <select className="input" required value={form.project} onChange={(e) => setForm({ ...form, project: e.target.value })}>
+              <select
+                className="input"
+                required
+                value={form.project}
+                onChange={(e) => {
+                  const projectId = e.target.value;
+                  const nextMembers = (projectsQuery.data?.items || []).find((project) => project._id === projectId)?.members || [];
+                  const nextAssignee = nextMembers.some((member) => String(member._id || member) === form.assignee)
+                    ? form.assignee
+                    : "";
+                  setForm({ ...form, project: projectId, assignee: nextAssignee });
+                }}
+              >
                 <option value="">Select project</option>
-                {(projectsQuery.data?.items || []).map((project) => <option key={project._id} value={project._id}>{project.name}</option>)}
+                {(projectsQuery.data?.items || []).map((project) => (
+                  <option key={project._id} value={project._id}>
+                    {project.name}
+                  </option>
+                ))}
               </select>
             </FormField>
             <FormField label="Assignee">
-              <select className="input" required value={form.assignee} onChange={(e) => setForm({ ...form, assignee: e.target.value })}>
-                <option value="">Select user</option>
-                {(usersQuery.data?.items || []).map((member) => <option key={member._id} value={member._id}>{member.name}</option>)}
+              <select
+                className="input"
+                required
+                value={form.assignee}
+                onChange={(e) => setForm({ ...form, assignee: e.target.value })}
+                disabled={!form.project}
+              >
+                <option value="">{form.project ? "Select member" : "Select project first"}</option>
+                {projectMembers.map((member) => (
+                  <option key={member._id || member} value={member._id || member}>
+                    {member.name || member}
+                  </option>
+                ))}
               </select>
+              {form.project && projectMembers.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No members are assigned to this project yet.</p>
+              ) : null}
             </FormField>
             <FormField label="Status">
               <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>

@@ -6,6 +6,7 @@ import { EmptyState } from "../../components/common/EmptyState";
 import { SkeletonCard } from "../../components/common/SkeletonCard";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import { FormField } from "../../components/forms/FormField";
+import MultiSelect from "../../components/forms/MultiSelect";
 import { useFetch } from "../../hooks/useFetch";
 import { formatDate } from "../../utils/helpers";
 import { projectStatuses, priorities } from "../../utils/constants";
@@ -118,18 +119,17 @@ export default function ProjectsPage() {
             </FormField>
             <div className="md:col-span-2">
               <FormField label="Assign members">
-                <select
-                  multiple
-                  className="input min-h-36"
-                  value={form.members}
-                  onChange={(e) => setForm({ ...form, members: Array.from(e.target.selectedOptions, (option) => option.value) })}
-                >
-                  {(directoryQuery.data?.items || []).map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.name} • {member.role}
-                    </option>
-                  ))}
-                </select>
+                <MultiSelect
+                  options={(directoryQuery.data?.items || []).map((member) => ({
+                    value: member._id,
+                    label: member.name,
+                    subtitle: member.role,
+                  }))}
+                  selected={form.members}
+                  onChange={(members) => setForm({ ...form, members })}
+                  placeholder="Search team members"
+                  emptyMessage="No users available to assign."
+                />
               </FormField>
             </div>
             <div className="md:col-span-2">

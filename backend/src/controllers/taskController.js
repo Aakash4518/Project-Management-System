@@ -24,6 +24,19 @@ const ensureProjectAccess = async (projectId, user) => {
   return project;
 };
 
+const validateAssigneeMembership = (project, assignee) => {
+  const assigneeId = typeof assignee === "string" ? assignee : assignee?._id || assignee;
+  if (
+    !project.owner.equals(assigneeId) &&
+    !project.members.some((member) => member.equals(assigneeId))
+  ) {
+    throw new AppError(
+      "Assignee must be a member of the selected project",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+};
+
 export const getTasks = async (req, res) => {
   const filter = {};
   if (req.query.project) filter.project = req.query.project;
@@ -54,7 +67,8 @@ export const getTaskById = async (req, res) => {
 };
 
 export const createTask = async (req, res) => {
-  await ensureProjectAccess(req.body.project, req.user);
+  const project = await ensureProjectAccess(req.body.project, req.user);
+  validateAssigneeMembership(project, req.body.assignee);
   const { _id, ...payload } = req.body;
 
   const task = await Task.create({
@@ -91,6 +105,10 @@ export const updateTask = async (req, res) => {
   if (!canManageTask(req.user) && !isAssignee) {
     throw new AppError("Permission denied", StatusCodes.FORBIDDEN);
   }
+
+  const project = await Project.findById(req.body.project || task.project);
+  if (!project) throw new AppError("Project not found", StatusCodes.NOT_FOUND);
+  validateAssigneeMembership(project, req.body.assignee || task.assignee);
 
   if (!canManageTask(req.user)) {
     const allowedFields = ["status", "comments"];
