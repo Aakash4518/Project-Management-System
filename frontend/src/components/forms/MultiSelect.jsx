@@ -12,10 +12,18 @@ export default function MultiSelect({
 }) {
   const [query, setQuery] = useState("");
 
+  if (!Array.isArray(options)) {
+    console.error("MultiSelect: options must be an array", options);
+    return <div className="text-red-500">Error: Invalid options provided</div>;
+  }
+
   const filteredOptions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(normalized));
+    return options.filter((option) => {
+      if (!option.label) return false;
+      return option.label.toLowerCase().includes(normalized);
+    });
   }, [options, query]);
 
   const selectedItems = useMemo(
@@ -24,6 +32,7 @@ export default function MultiSelect({
   );
 
   const toggleOption = (value) => {
+    if (!onChange) return;
     if (selected.includes(value)) {
       onChange(selected.filter((item) => item !== value));
       return;
@@ -32,11 +41,13 @@ export default function MultiSelect({
   };
 
   const selectAll = () => {
-    const all = filteredOptions.map((option) => option.value);
+    if (!onChange) return;
+    const all = filteredOptions.map((option) => option.value).filter(Boolean);
     onChange(Array.from(new Set([...selected, ...all])));
   };
 
   const clearAll = () => {
+    if (!onChange) return;
     onChange([]);
   };
 

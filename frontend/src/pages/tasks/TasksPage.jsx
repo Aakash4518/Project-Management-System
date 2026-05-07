@@ -38,6 +38,18 @@ export default function TasksPage() {
     return project?.members || [];
   }, [projectsQuery.data?.items, form.project]);
 
+  const filterableMembers = useMemo(() => {
+    if (!user || !Array.isArray(projectMembers)) return [];
+    let members = [...projectMembers];
+    if (user.role === "manager") {
+      members = members.filter((member) => {
+        const memberRole = typeof member === "string" ? "user" : member?.role;
+        return memberRole === "user";
+      });
+    }
+    return members;
+  }, [projectMembers, user]);
+
   useEffect(() => {
     if (!user) return;
     const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000");
@@ -157,12 +169,15 @@ export default function TasksPage() {
               <FormField label="Assign team members">
                 {form.project ? (
                   <MultiSelect
-                    options={filterableMembers.map((member) => ({
-                      value: member._id || member,
-                      label: member.name || member,
-                      subtitle: member.role,
-                    }))}
-                    selected={form.assignees}
+                    options={(filterableMembers || []).map((member) => {
+                      if (!member) return null;
+                      return {
+                        value: member._id || member,
+                        label: member.name || member,
+                        subtitle: member.role || "Team member",
+                      };
+                    }).filter(Boolean)}
+                    selected={form.assignees || []}
                     onChange={(assignees) => setForm({ ...form, assignees })}
                     placeholder="Search team members"
                     emptyMessage="No available members in this project."
