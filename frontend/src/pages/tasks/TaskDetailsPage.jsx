@@ -25,6 +25,9 @@ const MetaCard = ({ icon: Icon, label, value }) => (
   </div>
 );
 
+const getAssignees = (task) => task?.assignees?.length ? task.assignees : task?.assignee ? [task.assignee] : [];
+const getAssigneeNames = (assignees) => assignees.map((assignee) => assignee?.name).filter(Boolean).join(", ") || "Unassigned";
+
 export default function TaskDetailsPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -34,9 +37,11 @@ export default function TaskDetailsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const task = data?.task;
+  const assignees = getAssignees(task);
   const canUpdateStatus =
     task &&
-    (["admin", "manager"].includes(user?.role) || task.assignee?._id === user?.id);
+    (["admin", "manager"].includes(user?.role) ||
+      assignees.some((assignee) => (assignee?._id || assignee) === user?.id));
 
   const handleStatusUpdate = async (status) => {
     setSubmitting(true);
@@ -117,7 +122,7 @@ export default function TaskDetailsPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetaCard icon={ClipboardList} label="Project" value={task.project?.name || "No project"} />
-        <MetaCard icon={UserCircle2} label="Assignee" value={task.assignee?.name || "Unassigned"} />
+        <MetaCard icon={UserCircle2} label="Assignees" value={getAssigneeNames(assignees)} />
         <MetaCard icon={CheckCircle2} label="Reporter" value={task.reporter?.name || "Unknown"} />
         <MetaCard icon={CalendarDays} label="Due Date" value={formatDate(task.dueDate)} />
       </section>
@@ -127,13 +132,21 @@ export default function TaskDetailsPage() {
           <h2 className="font-display text-2xl font-bold">People</h2>
           <div className="mt-6 space-y-4">
             <div className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Assignee</p>
-              <div className="mt-3 flex items-center gap-3">
-                <Avatar name={task.assignee?.name} />
-                <div>
-                  <p className="font-semibold">{task.assignee?.name || "Unassigned"}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{task.assignee?.role || "No role"}</p>
-                </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Assignees</p>
+              <div className="mt-3 space-y-3">
+                {assignees.length ? (
+                  assignees.map((assignee) => (
+                    <div key={assignee?._id || assignee} className="flex items-center gap-3">
+                      <Avatar name={assignee?.name} />
+                      <div>
+                        <p className="font-semibold">{assignee?.name || "Unassigned"}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{assignee?.role || "No role"}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Unassigned</p>
+                )}
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">

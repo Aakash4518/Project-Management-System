@@ -11,9 +11,11 @@ const canAccessProject = (project, user) =>
   project.owner.equals(user._id) ||
   project.members.some((member) => member.equals(user._id));
 
+const projectTaskFilter = (projectId) => ({ project: projectId });
+
 const attachProjectMetrics = async (projectDoc) => {
-  const tasks = await Task.find({ project: projectDoc._id })
-    .populate("assignee reporter", "name email role avatar")
+  const tasks = await Task.find(projectTaskFilter(projectDoc._id))
+    .populate("assignee assignees reporter", "name email role avatar")
     .sort({ dueDate: 1, updatedAt: -1 });
 
   const totalTasks = tasks.length;

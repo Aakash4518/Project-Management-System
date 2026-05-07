@@ -21,6 +21,11 @@ const StatCard = ({ icon: Icon, label, value }) => (
   </div>
 );
 
+const getAssigneeNames = (task) => {
+  const assignees = task.assignees?.length ? task.assignees : task.assignee ? [task.assignee] : [];
+  return assignees.map((assignee) => assignee?.name).filter(Boolean).join(", ") || "Unassigned";
+};
+
 export default function ProjectDetailsPage() {
   const { id } = useParams();
   const { data, loading, error } = useFetch(`/projects/${id}`, [id]);
@@ -135,7 +140,7 @@ export default function ProjectDetailsPage() {
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 text-sm text-slate-500 dark:text-slate-400 md:grid-cols-3">
-                    <p>Assignee: <span className="font-semibold text-slate-800 dark:text-slate-100">{task.assignee?.name || "Unassigned"}</span></p>
+                    <p>Assignees: <span className="font-semibold text-slate-800 dark:text-slate-100">{getAssigneeNames(task)}</span></p>
                     <p>Reporter: <span className="font-semibold text-slate-800 dark:text-slate-100">{task.reporter?.name || "Unknown"}</span></p>
                     <p>Due: <span className="font-semibold text-slate-800 dark:text-slate-100">{formatDate(task.dueDate)}</span></p>
                   </div>

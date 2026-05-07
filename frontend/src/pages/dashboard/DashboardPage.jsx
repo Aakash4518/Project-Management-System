@@ -6,6 +6,11 @@ import { SkeletonCard } from "../../components/common/SkeletonCard";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import { formatDate } from "../../utils/helpers";
 
+const getAssigneeNames = (task) => {
+  const assignees = task.assignees?.length ? task.assignees : task.assignee ? [task.assignee] : [];
+  return assignees.map((assignee) => assignee?.name).filter(Boolean).join(", ") || "Unassigned";
+};
+
 export default function DashboardPage() {
   const { data, loading, error } = useFetch("/dashboard", []);
 
@@ -96,7 +101,7 @@ export default function DashboardPage() {
               <div key={task._id} className="flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 last:border-b-0 dark:border-slate-800">
                 <div>
                   <p className="font-semibold">{task.title}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{task.assignee?.name}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{getAssigneeNames(task)}</p>
                 </div>
                 <StatusBadge tone={task.status}>{task.status}</StatusBadge>
               </div>

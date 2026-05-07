@@ -7,10 +7,17 @@ import { emitToUser } from "../socket/index.js";
 
 const canManageTask = (user) => ["admin", "manager"].includes(user.role);
 
+const isSameId = (value, id) => String(value?._id || value) === String(id);
+
+const getTaskAssignees = (task) => {
+  if (task.assignees?.length) return task.assignees;
+  return task.assignee ? [task.assignee] : [];
+};
+
 const canAccessTask = (task, user) =>
   canManageTask(user) ||
-  task.assignees.some((assignee) => assignee.equals(user._id)) ||
-  task.reporter.equals(user._id);
+  getTaskAssignees(task).some((assignee) => isSameId(assignee, user._id)) ||
+  isSameId(task.reporter, user._id);
 
 const ensureProjectAccess = async (projectId, user) => {
   const project = await Project.findById(projectId);
@@ -44,11 +51,13 @@ export const getTasks = async (req, res) => {
   if (req.query.project) filter.project = req.query.project;
   if (req.query.status) filter.status = req.query.status;
   if (req.query.priority) filter.priority = req.query.priority;
-  if (req.user.role === "user") filter.assignees = req.user._id;
+  if (req.user.role === "user") {
+    filter.$or = [{ assignees: req.user._id }, { assignee: req.user._id }];
+  }
 
   const tasks = await Task.find(filter)
     .populate("project", "name status")
-    .populate("assignees reporter", "name email avatar role")
+    .populate("assignee assignees reporter", "name email avatar role")
     .sort({ dueDate: 1, updatedAt: -1 });
 
   res.json({ success: true, data: { items: tasks } });
@@ -57,7 +66,7 @@ export const getTasks = async (req, res) => {
 export const getTaskById = async (req, res) => {
   const task = await Task.findById(req.params.id)
     .populate("project", "name status priority dueDate")
-    .populate("assignee reporter", "name email avatar role title")
+    .populate("assignee assignees reporter", "name email avatar role title")
     .populate("comments.author", "name email avatar role");
 
   if (!task) throw new AppError("Task not found", StatusCodes.NOT_FOUND);
@@ -75,12 +84,13 @@ export const createTask = async (req, res) => {
 
   const task = await Task.create({
     ...payload,
+    assignee: payload.assignees?.[0],
     reporter: req.user._id,
     activity: [{ actor: req.user._id, action: "Task created" }],
   });
   const populatedTask = await Task.findById(task._id)
     .populate("project", "name status")
-    .populate("assignees reporter", "name email avatar role");
+    .populate("assignee assignees reporter", "name email avatar role");
 
   await createActivity({
     actor: req.user._id,
@@ -90,7 +100,7 @@ export const createTask = async (req, res) => {
     message: `${req.user.name} created task ${task.title}`,
   });
 
-  for (const assigneeId of task.assignees) {
+  for (const assigneeId of getTaskAssignees(task)) {
     emitToUser(String(assigneeId), "task:assigned", {
       title: "New task assigned",
       taskId: task._id,
@@ -105,7 +115,7 @@ export const updateTask = async (req, res) => {
   const task = await Task.findById(req.params.id);
   if (!task) throw new AppError("Task not found", StatusCodes.NOT_FOUND);
 
-  const isAssignee = task.assignees.some((assignee) => assignee.equals(req.user._id));
+  const isAssignee = getTaskAssignees(task).some((assignee) => isSameId(assignee, req.user._id));
   if (!canManageTask(req.user) && !isAssignee) {
     throw new AppError("Permission denied", StatusCodes.FORBIDDEN);
   }
@@ -122,13 +132,14 @@ export const updateTask = async (req, res) => {
   }
 
   const { _id, reporter, ...payload } = req.body;
+  if (payload.assignees?.length) payload.assignee = payload.assignees[0];
   Object.assign(task, payload);
   if (req.body.status === "done") task.completedAt = new Date();
   task.activity.push({ actor: req.user._id, action: `Updated task to ${task.status}` });
   await task.save();
   const populatedTask = await Task.findById(task._id)
     .populate("project", "name status")
-    .populate("assignee reporter", "name email avatar role");
+    .populate("assignee assignees reporter", "name email avatar role");
 
   await createActivity({
     actor: req.user._id,
@@ -156,7 +167,7 @@ export const addTaskComment = async (req, res) => {
   const task = await Task.findById(req.params.id);
   if (!task) throw new AppError("Task not found", StatusCodes.NOT_FOUND);
 
-  const isAssignee = task.assignee.equals(req.user._id);
+  const isAssignee = getTaskAssignees(task).some((assignee) => isSameId(assignee, req.user._id));
   if (!canManageTask(req.user) && !isAssignee) {
     throw new AppError("Permission denied", StatusCodes.FORBIDDEN);
   }
@@ -166,7 +177,7 @@ export const addTaskComment = async (req, res) => {
   await task.save();
   const populatedTask = await Task.findById(task._id)
     .populate("project", "name status")
-    .populate("assignee reporter", "name email avatar role");
+    .populate("assignee assignees reporter", "name email avatar role");
 
   res.status(StatusCodes.CREATED).json({ success: true, data: { task: populatedTask } });
 };

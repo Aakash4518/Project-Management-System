@@ -5,13 +5,13 @@ import { ActivityLog } from "../models/ActivityLog.js";
 import { User } from "../models/User.js";
 
 export const getDashboard = async (req, res) => {
-  const scope = req.user.role === "user" ? { assignees: req.user._id } : {};
+  const scope = req.user.role === "user" ? { $or: [{ assignees: req.user._id }, { assignee: req.user._id }] } : {};
   const projectScope =
     req.user.role === "user" ? { members: req.user._id } : {};
 
   const [projects, tasks, overdueTasks, recentActivity, users] = await Promise.all([
     Project.countDocuments(projectScope),
-    Task.find(scope).populate("project assignees reporter", "name email").sort({ createdAt: -1 }),
+    Task.find(scope).populate("project assignee assignees reporter", "name email").sort({ createdAt: -1 }),
     Task.countDocuments({
       ...scope,
       dueDate: { $lt: new Date() },
