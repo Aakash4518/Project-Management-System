@@ -5,6 +5,7 @@ import api from "../../api/client";
 import { EmptyState } from "../../components/common/EmptyState";
 import { KanbanBoard } from "../../components/kanban/KanbanBoard";
 import { FormField } from "../../components/forms/FormField";
+import MultiSelect from "../../components/forms/MultiSelect";
 import { useFetch } from "../../hooks/useFetch";
 import { priorities, taskStatuses } from "../../utils/constants";
 import { useToast } from "../../context/ToastContext";
@@ -15,7 +16,7 @@ const initialForm = {
   title: "",
   description: "",
   project: "",
-  assignee: "",
+  assignees: [],
   status: "todo",
   priority: "medium",
   dueDate: "",
@@ -55,7 +56,7 @@ export default function TasksPage() {
         title: form.title,
         description: form.description,
         project: form.project,
-        assignee: form.assignee,
+        assignees: form.assignees,
         status: form.status,
         priority: form.priority,
         dueDate: form.dueDate,
@@ -141,12 +142,7 @@ export default function TasksPage() {
                 required
                 value={form.project}
                 onChange={(e) => {
-                  const projectId = e.target.value;
-                  const nextMembers = (projectsQuery.data?.items || []).find((project) => project._id === projectId)?.members || [];
-                  const nextAssignee = nextMembers.some((member) => String(member._id || member) === form.assignee)
-                    ? form.assignee
-                    : "";
-                  setForm({ ...form, project: projectId, assignee: nextAssignee });
+                  setForm({ ...form, project: e.target.value, assignees: [] });
                 }}
               >
                 <option value="">Select project</option>
@@ -157,25 +153,25 @@ export default function TasksPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Assignee">
-              <select
-                className="input"
-                required
-                value={form.assignee}
-                onChange={(e) => setForm({ ...form, assignee: e.target.value })}
-                disabled={!form.project}
-              >
-                <option value="">{form.project ? "Select member" : "Select project first"}</option>
-                {projectMembers.map((member) => (
-                  <option key={member._id || member} value={member._id || member}>
-                    {member.name || member}
-                  </option>
-                ))}
-              </select>
-              {form.project && projectMembers.length === 0 ? (
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No members are assigned to this project yet.</p>
-              ) : null}
-            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Assign team members">
+                {form.project ? (
+                  <MultiSelect
+                    options={filterableMembers.map((member) => ({
+                      value: member._id || member,
+                      label: member.name || member,
+                      subtitle: member.role,
+                    }))}
+                    selected={form.assignees}
+                    onChange={(assignees) => setForm({ ...form, assignees })}
+                    placeholder="Search team members"
+                    emptyMessage="No available members in this project."
+                  />
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Select a project first to assign members.</p>
+                )}
+              </FormField>
+            </div>
             <FormField label="Status">
               <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                 {taskStatuses.map((status) => <option key={status}>{status}</option>)}
@@ -238,7 +234,7 @@ export default function TasksPage() {
                             title: task.title,
                             description: task.description || "",
                             project: task.project?._id || task.project,
-                            assignee: task.assignee?._id || task.assignee,
+                            assignees: (task.assignees || []).map((assignee) => assignee._id || assignee),
                             status: task.status,
                             priority: task.priority,
                             dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",

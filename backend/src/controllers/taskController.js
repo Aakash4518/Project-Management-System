@@ -9,7 +9,7 @@ const canManageTask = (user) => ["admin", "manager"].includes(user.role);
 
 const canAccessTask = (task, user) =>
   canManageTask(user) ||
-  task.assignee.equals(user._id) ||
+  task.assignees.some((assignee) => assignee.equals(user._id)) ||
   task.reporter.equals(user._id);
 
 const ensureProjectAccess = async (projectId, user) => {
@@ -24,17 +24,19 @@ const ensureProjectAccess = async (projectId, user) => {
   return project;
 };
 
-const validateAssigneeMembership = (project, assignee) => {
-  const assigneeId = typeof assignee === "string" ? assignee : assignee?._id || assignee;
-  if (
-    !project.owner.equals(assigneeId) &&
-    !project.members.some((member) => member.equals(assigneeId))
-  ) {
-    throw new AppError(
-      "Assignee must be a member of the selected project",
-      StatusCodes.BAD_REQUEST
-    );
-  }
+const validateAssigneesMembership = (project, assignees, userRole) => {
+  const assigneeIds = Array.isArray(assignees) ? assignees : [assignees];
+  assigneeIds.forEach((assigneeId) => {
+    const assigneeIdStr = typeof assigneeId === "string" ? assigneeId : assigneeId?._id || assigneeId;
+    const isProjectMember = project.members.some((member) => member.equals(assigneeIdStr));
+    const isProjectOwner = project.owner.equals(assigneeIdStr);
+    if (!isProjectMember && !isProjectOwner) {
+      throw new AppError(
+        "Assignee must be a member of the selected project",
+        StatusCodes.BAD_REQUEST
+      );
+    }
+  });
 };
 
 export const getTasks = async (req, res) => {
@@ -42,11 +44,11 @@ export const getTasks = async (req, res) => {
   if (req.query.project) filter.project = req.query.project;
   if (req.query.status) filter.status = req.query.status;
   if (req.query.priority) filter.priority = req.query.priority;
-  if (req.user.role === "user") filter.assignee = req.user._id;
+  if (req.user.role === "user") filter.assignees = req.user._id;
 
   const tasks = await Task.find(filter)
     .populate("project", "name status")
-    .populate("assignee reporter", "name email avatar role")
+    .populate("assignees reporter", "name email avatar role")
     .sort({ dueDate: 1, updatedAt: -1 });
 
   res.json({ success: true, data: { items: tasks } });
@@ -68,7 +70,7 @@ export const getTaskById = async (req, res) => {
 
 export const createTask = async (req, res) => {
   const project = await ensureProjectAccess(req.body.project, req.user);
-  validateAssigneeMembership(project, req.body.assignee);
+  validateAssigneesMembership(project, req.body.assignees, req.user.role);
   const { _id, ...payload } = req.body;
 
   const task = await Task.create({
@@ -78,7 +80,7 @@ export const createTask = async (req, res) => {
   });
   const populatedTask = await Task.findById(task._id)
     .populate("project", "name status")
-    .populate("assignee reporter", "name email avatar role");
+    .populate("assignees reporter", "name email avatar role");
 
   await createActivity({
     actor: req.user._id,
@@ -88,11 +90,13 @@ export const createTask = async (req, res) => {
     message: `${req.user.name} created task ${task.title}`,
   });
 
-  emitToUser(String(task.assignee), "task:assigned", {
-    title: "New task assigned",
-    taskId: task._id,
-    taskTitle: task.title,
-  });
+  for (const assigneeId of task.assignees) {
+    emitToUser(String(assigneeId), "task:assigned", {
+      title: "New task assigned",
+      taskId: task._id,
+      taskTitle: task.title,
+    });
+  }
 
   res.status(StatusCodes.CREATED).json({ success: true, data: { task: populatedTask } });
 };
@@ -101,14 +105,14 @@ export const updateTask = async (req, res) => {
   const task = await Task.findById(req.params.id);
   if (!task) throw new AppError("Task not found", StatusCodes.NOT_FOUND);
 
-  const isAssignee = task.assignee.equals(req.user._id);
+  const isAssignee = task.assignees.some((assignee) => assignee.equals(req.user._id));
   if (!canManageTask(req.user) && !isAssignee) {
     throw new AppError("Permission denied", StatusCodes.FORBIDDEN);
   }
 
   const project = await Project.findById(req.body.project || task.project);
   if (!project) throw new AppError("Project not found", StatusCodes.NOT_FOUND);
-  validateAssigneeMembership(project, req.body.assignee || task.assignee);
+  if (req.body.assignees) validateAssigneesMembership(project, req.body.assignees, req.user.role);
 
   if (!canManageTask(req.user)) {
     const allowedFields = ["status", "comments"];
