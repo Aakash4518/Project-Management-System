@@ -1,74 +1,165 @@
 # TaskFlow Pro
 
-TaskFlow Pro is a production-style full-stack project and task management application built with `React + Vite`, `Tailwind CSS`, `Node.js`, `Express`, `MongoDB`, `Mongoose`, `JWT`, and `Socket.IO`.
+TaskFlow Pro is a full-stack project and task management application built with React, Vite, Tailwind CSS, Node.js, Express, MongoDB, Mongoose, JWT authentication, and Socket.IO.
 
-It includes:
+The application is structured like a production handoff project: separated frontend and backend apps, environment-based configuration, protected API routes, role-based access control, reusable UI modules, validation middleware, centralized error handling, and seed data for local demos.
 
-- Authentication with signup, login, logout, session persistence, and forgot-password UI
-- Role-based access control for `admin`, `manager`, and `user`
-- Analytics dashboard with KPI cards, charts, overdue tracking, and activity feed
-- Project CRUD with search, status tracking, priority, and member assignment
+## Features
+
+- Email/password authentication with JWT-protected sessions
+- Role-based access for `admin`, `manager`, and `user`
+- Dashboard KPIs, charts, overdue work, and recent activity
+- Project CRUD with status, priority, members, and search
 - Task CRUD with assignees, due dates, priority, comments, and Kanban drag-and-drop
-- Centralized validation, error handling, secure middleware, and scalable backend structure
-- Dark/light mode, toast notifications, skeleton loaders, empty states, and responsive UI
+- User directory and admin user management
+- Socket.IO-ready backend and client setup for realtime updates
+- Light/dark mode, toast feedback, loading states, empty states, and responsive layouts
+- Secure backend defaults with Helmet, CORS, validation, and centralized error responses
 
-## Structure
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18, Vite, Tailwind CSS, React Router, Axios, Socket.IO Client |
+| Backend | Node.js, Express, Mongoose, Socket.IO, JWT, bcryptjs |
+| Database | MongoDB or MongoDB Atlas |
+| Tooling | Nodemon, Vite, PostCSS, Autoprefixer |
+
+## Project Structure
 
 ```text
-backend/
-frontend/
-README.md
+.
+|-- backend/
+|   |-- src/
+|   |   |-- config/
+|   |   |-- controllers/
+|   |   |-- data/
+|   |   |-- middleware/
+|   |   |-- models/
+|   |   |-- routes/
+|   |   |-- services/
+|   |   |-- socket/
+|   |   |-- utils/
+|   |   |-- validators/
+|   |   |-- app.js
+|   |   `-- server.js
+|   |-- .env.example
+|   `-- package.json
+|-- frontend/
+|   |-- src/
+|   |   |-- api/
+|   |   |-- components/
+|   |   |-- context/
+|   |   |-- hooks/
+|   |   |-- layouts/
+|   |   |-- pages/
+|   |   |-- styles/
+|   |   |-- utils/
+|   |   |-- App.jsx
+|   |   `-- main.jsx
+|   |-- .env.example
+|   `-- package.json
+|-- package.json
+`-- README.md
 ```
 
-## Backend Setup
+## Prerequisites
 
-1. Copy `backend/.env.example` to `backend/.env`
-2. Set `MONGODB_URI`, `JWT_SECRET`, and `CLIENT_URL`
-3. Install dependencies:
+- Node.js 18 or newer
+- npm 9 or newer
+- MongoDB running locally, or a MongoDB Atlas connection string
+
+## Environment Variables
+
+Create `backend/.env` from `backend/.env.example`:
+
+```env
+PORT=5000
+CLIENT_URL=http://localhost:5173
+MONGODB_URI=mongodb://127.0.0.1:27017/taskflow-pro
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_EXPIRES_IN=7d
+```
+
+Create `frontend/.env` from `frontend/.env.example`:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_SOCKET_URL=http://localhost:5000
+```
+
+For production, use a strong `JWT_SECRET`, restrict `CLIENT_URL` to the deployed frontend origin, and use a managed MongoDB connection string.
+
+## Local Development
+
+Install all dependencies from the repository root:
 
 ```bash
-cd backend
-npm install
+npm run install:all
 ```
 
-4. Start the API:
+Start the backend API:
 
 ```bash
-npm run dev
+npm run dev:backend
 ```
 
-5. Optional seed data:
+Start the frontend app in another terminal:
+
+```bash
+npm run dev:frontend
+```
+
+Default local URLs:
+
+- Frontend: `http://localhost:5173`
 
 ```bash
 npm run seed
 ```
 
-## Frontend Setup
+Demo credentials after seeding:
 
-1. Copy `frontend/.env.example` to `frontend/.env`
-2. Set `VITE_API_URL` and `VITE_SOCKET_URL`
-3. Install dependencies:
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@taskflow.pro` | `Password123!` |
+| Manager | `manager@taskflow.pro` | `Password123!` |
+| User | `user@taskflow.pro` | `Password123!` |
 
-```bash
-cd frontend
-npm install
-```
+## Available Scripts
 
-4. Start the app:
+Root scripts:
 
-```bash
-npm run dev
-```
+| Command | Description |
+| --- | --- |
+| `npm run install:all` | Install backend and frontend dependencies |
+| `npm run dev:backend` | Start the Express API with Nodemon |
+| `npm run dev:frontend` | Start the Vite development server |
+| `npm run seed` | Seed demo data into MongoDB |
 
-## Demo Credentials
+Backend scripts:
 
-After seeding:
+| Command | Description |
+| --- | --- |
+| `npm run dev --prefix backend` | Run the API in development mode |
+| `npm start --prefix backend` | Run the API with Node |
+| `npm run seed --prefix backend` | Seed the database |
 
-- Admin: `admin@taskflow.pro` / `Password123!`
-- Manager: `manager@taskflow.pro` / `Password123!`
-- User: `user@taskflow.pro` / `Password123!`
+Frontend scripts:
+
+| Command | Description |
+| --- | --- |
+| `npm run dev --prefix frontend` | Run the Vite dev server |
+| `npm run build --prefix frontend` | Create a production build |
+| `npm run preview --prefix frontend` | Preview the production build locally |
 
 ## API Overview
+
+All protected routes require an authenticated JWT session.
+
+### Health
+
+- `GET /api/health`
 
 ### Auth
 
@@ -84,6 +175,7 @@ After seeding:
 ### Projects
 
 - `GET /api/projects`
+- `GET /api/projects/:id`
 - `POST /api/projects`
 - `PUT /api/projects/:id`
 - `DELETE /api/projects/:id`
@@ -91,6 +183,7 @@ After seeding:
 ### Tasks
 
 - `GET /api/tasks`
+- `GET /api/tasks/:id`
 - `POST /api/tasks`
 - `PUT /api/tasks/:id`
 - `DELETE /api/tasks/:id`
@@ -100,28 +193,53 @@ After seeding:
 
 - `GET /api/users/directory`
 - `GET /api/users`
+- `POST /api/users`
 - `PATCH /api/users/:id`
+- `DELETE /api/users/:id`
 
-## RBAC Rules
+## Authorization Model
 
-- Admin: full access to users, projects, and tasks
-- Manager: can create and manage projects and tasks
-- User: can view assigned work and update their own task status/comments only
+| Role | Access |
+| --- | --- |
+| Admin | Full access to users, projects, and tasks |
+| Manager | Create and manage projects and tasks |
+| User | View assigned work and update allowed task fields/comments |
 
-Backend middleware enforces access independently of the frontend UI.
+Authorization is enforced by backend middleware. Frontend route guards and conditional UI should be treated as usability helpers, not security boundaries.
 
-## Deployment Guide
+## Production Deployment
 
 ### Backend
 
-- Deploy to Render, Railway, or a VPS
-- Provide environment variables from `backend/.env.example`
-- Use MongoDB Atlas for the production database
-- Set `CLIENT_URL` to the deployed frontend origin
+1. Deploy the `backend` app to Render, Railway, Fly.io, a VPS, or another Node.js host.
+2. Set all variables from `backend/.env.example` in the hosting provider.
+3. Use MongoDB Atlas or another managed MongoDB service.
+4. Set `CLIENT_URL` to the production frontend origin.
+5. Run the backend with `npm start --prefix backend`.
+6. Confirm `GET /api/health` returns a successful response.
 
 ### Frontend
 
-- Deploy to Vercel or Netlify
-- Set `VITE_API_URL` to the deployed backend `/api` base URL
-- Set `VITE_SOCKET_URL` to the backend origin
+1. Deploy the `frontend` app to Vercel, Netlify, Cloudflare Pages, or another static host.
+2. Set `VITE_API_URL` to the deployed backend API URL, including `/api`.
+3. Set `VITE_SOCKET_URL` to the deployed backend origin.
+4. Build with `npm run build --prefix frontend`.
+5. Serve the generated `frontend/dist` directory.
 
+<<<<<<< HEAD
+=======
+## Production Readiness Notes
+
+Before using this project with real users, complete these items:
+
+- Replace the forgot-password preview behavior with a real email provider and reset-token flow.
+- Store secrets only in the deployment provider, never in Git.
+- Add automated tests for controllers, middleware, RBAC rules, and core frontend flows.
+- Add request logging, monitoring, error tracking, and database backup policies.
+- Review cookie, CORS, rate limiting, and HTTPS settings for the final deployment platform.
+- Validate Socket.IO behavior behind the selected hosting provider or reverse proxy.
+
+## License
+
+This project is private by default. Add a license before publishing or distributing it.
+>>>>>>> 077ae9b (Update README.md)
