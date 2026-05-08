@@ -125,8 +125,3 @@ Backend middleware enforces access independently of the frontend UI.
 - Set `VITE_API_URL` to the deployed backend `/api` base URL
 - Set `VITE_SOCKET_URL` to the backend origin
 
-## Notes
-
-- The forgot-password flow currently exposes a preview token instead of sending email; connect it to your mail provider for production
-- File upload and calendar/email integrations are scaffold-friendly extensions that can be added next through dedicated services
-- I could not run installs or local verification in this environment because the shell sandbox was failing for most non-trivial commands
