@@ -228,18 +228,7 @@ Authorization is enforced by backend middleware. Frontend route guards and condi
 
 <<<<<<< HEAD
 =======
-## Production Readiness Notes
-
-Before using this project with real users, complete these items:
-
-- Replace the forgot-password preview behavior with a real email provider and reset-token flow.
-- Store secrets only in the deployment provider, never in Git.
-- Add automated tests for controllers, middleware, RBAC rules, and core frontend flows.
-- Add request logging, monitoring, error tracking, and database backup policies.
-- Review cookie, CORS, rate limiting, and HTTPS settings for the final deployment platform.
-- Validate Socket.IO behavior behind the selected hosting provider or reverse proxy.
-
 ## License
-
-This project is private by default. Add a license before publishing or distributing it.
->>>>>>> 077ae9b (Update README.md)
+This project was developed as part of a technical assessment.
+All rights reserved © 2026 Akash. Unauthorized use, copying, 
+or distribution is not permitted.
